@@ -1,12 +1,18 @@
 from backtesting import Backtest, Strategy  # 引入回測和交易策略功能
-
 from backtesting.lib import crossover  # 從lib子模組引入判斷均線交會功能
 from backtesting.test import SMA  # 從test子模組引入繪製均線功能
-
 import pandas as pd  # 引入pandas讀取股價歷史資料CSV檔
+import os
 
-stock = "TSLA"  # 設定要測試的股票標的名稱
-# stock = "勤誠"  # 設定要測試的股票標的名稱
+# stock_name = "TSLA"
+# stock_name = "榮剛"
+# stock_name = "光寶科"
+# stock_name = "勤誠"
+stock_name = "台積電"
+
+data_source_yfinance = 1
+data_source_finmind = 2
+data_source = data_source_yfinance
 
 
 class SmaCross(Strategy):  # 交易策略命名為SmaClass，使用backtesting.py的Strategy功能
@@ -31,14 +37,20 @@ def my_print(contents, output_file=None):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv(f"./data/{stock}.csv", index_col=0)  # pandas讀取資料，並將第1欄作為索引欄
-    # df = df.interpolate()  # CSV檔案中若有缺漏，會使用內插法自動補值，不一定需要的功能
-    df.index = pd.to_datetime(df.index)  # 將索引欄資料轉換成pandas的時間格式，backtesting才有辦法排序
+    if data_source == data_source_yfinance:
+        data_folder = 'yfinance'
+    elif data_source == data_source_finmind:
+        data_folder = 'finmind'
+    file_path = os.path.join('data', data_folder, f'{stock_name}.csv')
+    df = pd.read_csv(file_path)  # pandas讀取資料，並將第1欄作為索引欄
+    df = df.interpolate()  # CSV檔案中若有缺漏，會使用內插法自動補值，不一定需要的功能
+    df['Date'] = pd.to_datetime(df['Date'])  # 將索引欄資料轉換成pandas的時間格式，backtesting才有辦法排序
+    df = df.set_index('Date')  # set date as index
 
     # 指定回測程式為test，在Backtest函數中依序放入(資料來源、策略、現金、手續費)
-    test = Backtest(df, SmaCross, cash=10000, commission=.002)
+    test = Backtest(df, SmaCross, cash=10000, commission=.004)
     # 執行回測程式並存到result中
     result = test.run()
-    with open(f"./backtest_result/{stock}_result.txt", 'w') as out_file:
+    with open(f"./backtest_result/{stock_name}_result.txt", 'w') as out_file:
         my_print('%s' % result, out_file)
-    # test.plot(filename=f"./backtest_result/{stock}_plot.html")  # 將線圖網頁依照指定檔名保存
+    test.plot(filename=f"./backtest_result/{stock_name}_plot.html", open_browser=False)  # 將線圖網頁依照指定檔名保存
